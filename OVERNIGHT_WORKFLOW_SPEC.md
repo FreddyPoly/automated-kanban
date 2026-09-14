@@ -159,24 +159,24 @@ scheduled/cron trigger — avoids wasted runs on nights with no prepared issues.
 
 ## GitHub access for the overnight run
 
-Claude's read-only GitHub connector (the one used to browse repos in chats/projects)
-only retrieves file names and contents on a branch — it cannot commit or push, so it
-is not usable for this. The overnight cloud task instead needs real git push access,
-which means a credential, handled like this:
+Corrected after reading Anthropic's actual docs on cloud environments and routines:
+**no manually-created token is needed at all.** Cloud scheduled tasks (routines)
+authenticate to GitHub through the Claude GitHub App connected to the account —
+"git credentials and signing keys stay outside the sandbox, and a proxy
+authenticates on the session's behalf with scoped credentials." The routine clones
+the repo and pushes commits under the user's own GitHub identity automatically, as
+long as the Claude GitHub App has access to `automated-kanban` (confirmed already
+installed).
 
-- Create one **fine-grained GitHub Personal Access Token**, scoped to only this
-  repository, with the minimum permission that allows pushing commits (contents:
-  read and write) and nothing else — no access to other repos, no admin, no account-
-  wide scope.
-- That token needs to be available to the cloud session the scheduled task spins up,
-  without ever appearing in chat text, in a commit, or in a file inside the repo.
-  The mechanism for that is Cowork's environment-level configuration (environment
-  variables/secrets attached to the cloud environment the scheduled task runs in) —
-  this needs to be confirmed against your actual Cowork account when we get to the
-  build step, since exactly what's exposed there isn't something I can verify from
-  here.
-- Whatever the mechanism, the token is created once, stored once, and reused by
-  every overnight run — not re-entered per run.
+A push to a non-`claude/`-prefixed branch (like our `overnight/<date>`) is only
+rejected if the branch is GitHub-protected, someone else has an open PR from it, or
+it carries commits from a different GitHub user — none of which applies here, since
+every commit on the branch comes from the same account.
+
+The fine-grained PAT created earlier in this session was used only for the manual
+`git push` calls made from the device shell while scaffolding the demo project —
+it's unrelated to how the automated pipeline authenticates, and the user was advised
+to revoke it now that it's unneeded.
 
 ## Demo project (test bed for the pipeline)
 
@@ -213,11 +213,14 @@ in any way, and the demo repo is fully self-contained/portable.
   new `implement-issue-auto` / `review-issue-auto` variants and `doc-to-issues`'s
   overnight-handoff addition. Committed and pushed.
 - Branch naming decided: `overnight/YYYY-MM-DD`.
+- GitHub access confirmed: the Claude GitHub App is installed on
+  `FreddyPoly/automated-kanban`, so no token/credential setup is needed for the
+  scheduled task to clone and push.
 
 ## Open items still for the build phase
 
-- Confirm, inside your actual Cowork environment settings, where the GitHub token
-  should be stored so the scheduled task can use it.
-- Create the scheduled task itself (phase 5 of the runbook) and run a real dry run
-  (phase 6): `interview` → `doc-to-issues` (with the overnight handoff) → fire the
-  task → verify the branch afterward.
+- Run the human half for real (phase 4): `interview` on a small kanban feature,
+  then `doc-to-issues` with the overnight handoff, to get real issues on an
+  `overnight/<date>` branch.
+- Create the scheduled task itself (phase 5) and run a real dry run (phase 6):
+  fire the task → verify the branch afterward.
