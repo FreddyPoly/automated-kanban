@@ -1,0 +1,62 @@
+<div class="board-page">
+  <header class="board-header">
+    <h1>Kanban Demo</h1>
+    <p class="subtitle">Test bed for the overnight implementation pipeline</p>
+  </header>
+
+  <form class="add-card" (ngSubmit)="addCard()">
+    <input
+      type="text"
+      name="newCardTitle"
+      placeholder="New card title…"
+      [(ngModel)]="newCardTitle"
+      maxlength="200"
+    />
+    <button type="submit" [disabled]="!newCardTitle.trim()">Add card</button>
+  </form>
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (loading) {
+    <p class="hint">Loading board…</p>
+  } @else {
+    <div class="board">
+      @for (column of columns; track column.id) {
+        <section class="column">
+          <h2>{{ column.label }}</h2>
+          <ul class="card-list">
+            @for (card of cardsIn(column.id); track card.id) {
+              <li class="card">
+                <span class="card-title">{{ card.title }}</span>
+                <div class="card-actions">
+                  <button
+                    type="button"
+                    title="Move left"
+                    [disabled]="isFirst(card.column)"
+                    (click)="move(card, -1)"
+                  >←</button>
+                  <button
+                    type="button"
+                    title="Move right"
+                    [disabled]="isLast(card.column)"
+                    (click)="move(card, 1)"
+                  >→</button>
+                  <button
+                    type="button"
+                    class="delete"
+                    title="Delete card"
+                    (click)="remove(card)"
+                  >✕</button>
+                </div>
+              </li>
+            } @empty {
+              <li class="empty">No cards</li>
+            }
+          </ul>
+        </section>
+      }
+    </div>
+  }
+</div>
