@@ -1,7 +1,7 @@
 ---
 id: urgent-cards-001
 title: Add urgent field to Card model and a toggle endpoint
-status: open
+status: done
 security: false
 owner: agent
 depends_on: []

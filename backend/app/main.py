@@ -31,6 +31,7 @@ class Card(BaseModel):
     id: int
     title: str
     column: Column
+    urgent: bool = False
 
 
 class CardCreate(BaseModel):
@@ -40,6 +41,10 @@ class CardCreate(BaseModel):
 
 class CardMove(BaseModel):
     column: Column
+
+
+class CardUrgent(BaseModel):
+    urgent: bool
 
 
 class _Store:
@@ -80,6 +85,14 @@ class _Store:
             card.column = column
             return card
 
+    def set_urgent(self, card_id: int, urgent: bool) -> Card:
+        with self._lock:
+            card = self._cards.get(card_id)
+            if card is None:
+                raise KeyError(card_id)
+            card.urgent = urgent
+            return card
+
     def delete_card(self, card_id: int) -> None:
         with self._lock:
             if card_id not in self._cards:
@@ -109,6 +122,14 @@ def create_card(data: CardCreate) -> Card:
 def move_card(card_id: int, data: CardMove) -> Card:
     try:
         return store.move_card(card_id, data.column)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+
+@app.patch("/api/cards/{card_id}/urgent")
+def set_card_urgent(card_id: int, data: CardUrgent) -> Card:
+    try:
+        return store.set_urgent(card_id, data.urgent)
     except KeyError:
         raise HTTPException(status_code=404, detail="Card not found")
 
