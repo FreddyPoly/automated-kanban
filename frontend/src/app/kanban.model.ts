@@ -4,6 +4,7 @@ export interface Card {
   id: number;
   title: string;
   column: ColumnId;
+  urgent: boolean;
 }
 
 export interface ColumnDef {

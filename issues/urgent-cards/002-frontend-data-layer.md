@@ -1,7 +1,7 @@
 ---
 id: urgent-cards-002
 title: Add urgent field to frontend Card model and service
-status: open
+status: done
 security: false
 owner: agent
 depends_on: [urgent-cards-001]

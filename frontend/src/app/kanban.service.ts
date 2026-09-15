@@ -22,6 +22,10 @@ export class KanbanService {
     return this.http.patch<Card>(`${API_BASE}/cards/${id}/move`, { column });
   }
 
+  setUrgent(id: number, urgent: boolean): Observable<Card> {
+    return this.http.patch<Card>(`${API_BASE}/cards/${id}/urgent`, { urgent });
+  }
+
   deleteCard(id: number): Observable<void> {
     return this.http.delete<void>(`${API_BASE}/cards/${id}`);
   }
