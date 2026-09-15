@@ -224,3 +224,79 @@ in any way, and the demo repo is fully self-contained/portable.
   `overnight/<date>` branch.
 - Create the scheduled task itself (phase 5) and run a real dry run (phase 6):
   fire the task → verify the branch afterward.
+
+## Correction — 2026-09-15: real root cause of the push failure, and the fix
+
+The phase-6 dry run happened (`overnight/2026-09-14`, `urgent-cards` feature, 3 issues).
+It ran to completion — all 3 issues implemented and independently re-reviewed — but every
+`git push` was rejected: `remote: access denied by the git proxy: FreddyPoly/automated-kanban
+is not in this session's authorized repository set, so the proxy will not inject a
+credential for it.` Read access worked throughout; only push was denied. The run's own
+safety net (a git bundle of the 4 unpushed commits, plus `OVERNIGHT_REPORT.md`) was sent
+directly to the user, so no work was lost, but nothing reached GitHub.
+
+**Initial hypothesis (wrong):** that the thing created was a local "scheduled task"
+rather than a cloud "routine," and that a routine would have push access by default.
+Checking the actual trigger (`RemoteTrigger` → `get`) disproved this: it was already a
+cloud routine (`created_kind: cowork_task`, run in an isolated cloud sandbox). The local
+`mcp__scheduled-tasks__create_scheduled_task` tool was never used — `list_scheduled_tasks`
+came back empty.
+
+**Actual root cause:** the failed routine was created with a placeholder
+`environment_id` (`env_011111111111111111111117`) and **empty `sources`/`outcomes`** in
+its `session_request.config`. With nothing telling the platform's git proxy that this
+routine is authorized to write to `FreddyPoly/automated-kanban`, the proxy had nothing to
+authorize a push credential against — hence the exact "not in this session's authorized
+repository set" error.
+
+**Fix, validated empirically** by creating disposable test routines and watching their
+run logs:
+
+- Set `session_request.environment_id` to `env_01HCoJULLFDFC9dciFU6H87z` — a real,
+  pre-existing Environment on this account already configured with GitHub App write
+  access to this repo (found via a leftover untested trigger the user had created earlier
+  while investigating this same problem).
+- Set `session_request.config.sources` to `[{"type": "git_repository", "url":
+  "https://github.com/FreddyPoly/automated-kanban"}]` (read/clone access).
+- Set `session_request.config.outcomes` to `[{"type": "git_repository", "git_info":
+  {"type": "github", "repo": "FreddyPoly/automated-kanban", "branches": [...]}}]` (write
+  target).
+
+With all three set, a test routine cloned, wrote a file, committed, and pushed
+successfully to GitHub — confirmed twice.
+
+**Side effect discovered during validation, which changes the branch-handoff design:**
+the platform does **not** honor the exact branch name given in `outcomes.git_info.branches`
+— it assigns its own randomly-suffixed branch every run (`test/push-check` requested,
+`test/push-check-rnf1yg` and `test/push-check-qlzcaa` actually used, on two different
+runs of the same trigger). Worse, the fired session has a hard built-in rule refusing to
+push to any branch other than the one it's already on, explicitly requiring "explicit
+permission" to override — which is unavailable in an unattended overnight run, so this
+can't be worked around from inside the prompt.
+
+This means the original plan (the routine checks out and pushes back to the *same*
+`overnight/<date>` branch `doc-to-issues` pushed to) is not achievable as designed. The
+adopted alternative, now implemented in `start-overnight-run`:
+
+- The routine works on whatever branch the platform assigns it.
+- Its prompt's first step is `git fetch origin overnight/<date> && git merge
+  origin/overnight/<date>`, pulling the human-prepared `SPEC.md`/`issues/` onto that
+  branch before `implement-issue-auto` runs. (`implement-issue-auto` already pushes with
+  `git push origin <current branch>` — branch-name-agnostic — so it needed no change.)
+- The routine's last action prints `FINAL BRANCH: <name>` so the actual branch is
+  discoverable from the run log/notification.
+- The user's morning routine changes slightly: check the notification/report for the
+  actual branch name, rather than assuming `overnight/<date>`.
+
+**Corrects the "GitHub access" section above**, which claimed no `environment_id`/token
+setup was needed at all — that undersold it. The Claude GitHub App being installed is
+necessary but not sufficient; the routine also needs an `environment_id` bound to a
+context with write access to this specific repo, plus explicit `sources`/`outcomes`
+entries naming the repo. Without those, the routine still authenticates as "you" for
+*reads*, but has no write grant.
+
+**Cleanup performed:** the failed `overnight/2026-09-14` trigger was left disabled
+as-is (it already auto-disabled after its one-shot fire, and its lost commits are
+recoverable from the git bundle already sent to the user). Three throwaway
+validation triggers were disabled, and the two test branches they actually pushed
+(`test/push-check-rnf1yg`, `test/push-check-qlzcaa`) were deleted from `origin`.
