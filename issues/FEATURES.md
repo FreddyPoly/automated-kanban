@@ -2,4 +2,4 @@
 
 | Feature | Issues | Status | Last QC |
 |---------|--------|--------|---------|
-| urgent-cards | 2/3 done | not-ready | — |
+| urgent-cards | 3/3 done | ready-for-qc | — |

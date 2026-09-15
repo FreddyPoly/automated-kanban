@@ -28,7 +28,7 @@
           <h2>{{ column.label }}</h2>
           <ul class="card-list">
             @for (card of cardsIn(column.id); track card.id) {
-              <li class="card">
+              <li class="card" [class.urgent]="card.urgent">
                 <span class="card-title">{{ card.title }}</span>
                 <div class="card-actions">
                   <button
@@ -43,6 +43,11 @@
                     [disabled]="isLast(card.column)"
                     (click)="move(card, 1)"
                   >→</button>
+                  <button
+                    type="button"
+                    [title]="card.urgent ? 'Unmark urgent' : 'Mark urgent'"
+                    (click)="toggleUrgent(card)"
+                  >⚑</button>
                   <button
                     type="button"
                     class="delete"

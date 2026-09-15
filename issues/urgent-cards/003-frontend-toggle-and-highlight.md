@@ -1,7 +1,7 @@
 ---
 id: urgent-cards-003
 title: Add urgent toggle button and highlight styling to cards
-status: open
+status: done
 security: false
 owner: agent
 depends_on: [urgent-cards-002]
@@ -36,3 +36,11 @@ when a card is urgent, per SPEC.md's "Behavior" section.
   add any sorting/reordering logic here, `cardsIn()` should stay as-is.
 - SPEC.md explicitly rejected adding an urgent option to the add-card form — don't touch
   `addCard()` or the form template.
+- code-review flagged that `toggleUrgent()` reads the stale local `card.urgent` before its
+  PATCH resolves, so a rapid double-click can send the same value twice instead of toggling
+  back — a real race, but the exact same pattern already exists in `move()`/`remove()`
+  (neither disables its button or debounces while a request is in flight), and this issue's
+  acceptance criteria explicitly asks `toggleUrgent` to update local state "the same way
+  move()/remove() do". Fixing it here alone would be inconsistent with the rest of the
+  component; worth its own follow-up issue if in-flight-request handling across all three
+  actions is ever wanted.

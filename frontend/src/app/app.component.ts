@@ -67,6 +67,12 @@ export class AppComponent implements OnInit {
     });
   }
 
+  toggleUrgent(card: Card): void {
+    this.kanban.setUrgent(card.id, !card.urgent).subscribe((updated) => {
+      this.cards = this.cards.map((c) => (c.id === updated.id ? updated : c));
+    });
+  }
+
   isFirst(column: ColumnId): boolean {
     return this.columns[0].id === column;
   }
