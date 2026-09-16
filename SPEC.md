@@ -37,16 +37,58 @@ Cards can be marked "urgent" and are shown with a visual highlight on the board.
   to keep the add-card form unchanged and the feature scope minimal; mark urgent after
   creation instead.
 
+## Feature: Per-column card creation
+
+The single global "add card" form (which always created into `todo`) is replaced by a
+per-column "+" button and inline input, so a card can be created directly in any column.
+
+### Behavior
+
+- **Removed**: the top-level `<form class="add-card">` (title input + "Add card" button)
+  above the board.
+- **"+" button**: each column header gets a small icon-only "+" button at its right end,
+  styled consistently with the existing card action buttons (`←` `→` `⚑` `✕`).
+- **Inline input**: clicking a column's "+" reveals an inline text input at the bottom of
+  that column's card list (after existing cards).
+  - **Enter** creates the card via `kanban.createCard(title, column.id)`. Empty/whitespace-
+    only titles don't submit (same guard as the old form).
+  - **Escape**, or clicking away (blur), cancels and hides the input without creating a
+    card.
+  - After a successful add, the input stays open, clears, and refocuses, so the user can
+    keep adding cards to that column without re-clicking "+". It only closes via Escape or
+    blur.
+- **Independent per-column state**: any number of columns can have their input open at
+  once — each column tracks its own open/closed state independently (no mutual exclusion
+  between columns).
+- **Ordering**: new cards are appended to the end of the column's list, matching the
+  previous append behavior.
+
+### Data model / API
+
+No backend or API changes. `createCard(title, column)` in `KanbanService` already accepts
+a target column; the frontend now just passes the clicked column's id instead of always
+`'todo'`.
+
+### Rejected alternatives
+
+- A single global input that only changes its "add to" column via a separate selector —
+  rejected in favor of putting the control directly on each column, which needs no extra
+  selection step.
+- Restricting to one open input at a time across the board — rejected; independent
+  per-column state is simpler to reason about and lets the user add to two columns without
+  the first input closing.
+
 ## Security
 
 No change to the project's existing risk posture: no auth, no persistence beyond the
-in-memory store, no sensitive data. This feature adds a boolean toggle on an existing
-internal card id — no new untrusted-input surface. Stays low-risk, same as the rest of the
-app (see `README.md`).
+in-memory store, no sensitive data. The "urgent" toggle adds a boolean flag on an existing
+internal card id, and per-column card creation only changes which column a card title
+(already free-text, already sent to the backend) is targeted at — neither introduces a new
+untrusted-input surface. Stays low-risk, same as the rest of the app (see `README.md`).
 
 ## QC approach
 
-No dedicated automated QC harness for this feature. The frontend is a small Angular app
+No dedicated automated QC harness for these features. The frontend is a small Angular app
 with existing unit-test scaffolding (karma/jasmine) and the backend exposes a thin, fully
 scriptable REST API — manual QC plus unit tests are sufficient; a GUI-automation harness
 would be noise for a surface this small.
