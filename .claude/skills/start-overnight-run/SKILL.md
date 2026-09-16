@@ -22,10 +22,24 @@ this automatically as a consequence of another skill running.
    (uncommitted or untracked) changes.
 2. Determine the branch name: `overnight/<YYYY-MM-DD>`, using today's date
    (`date +%Y-%m-%d`).
-   - If a branch with that name already exists locally or on `origin`, reuse it — check
-     it out (creating a local tracking branch from `origin/<branch>` if it only exists
-     remotely) rather than creating a second branch for the same day.
-   - Otherwise create it fresh from the current `main`.
+   - If **no** branch with that name exists yet (locally or on `origin`), create it
+     fresh from the current `main` — this is the common case.
+   - If a branch with that name **already exists**, don't silently reuse it — ask the
+     user whether this backlog should join that branch or be scheduled independently:
+     - **Join it** (e.g. re-running this skill because an earlier push failed, or
+       adding more issues before that night's run has fired): check it out (creating a
+       local tracking branch from `origin/<branch>` if it only exists remotely) and add
+       this backlog's commit to it as before — it'll be picked up by whatever routine
+       is already scheduled against that branch.
+     - **Independent run** (a second, separately-scheduled run landing the same day):
+       create a new branch instead, suffixed to disambiguate (e.g. `overnight/<date>-b`,
+       or a timestamp suffix — ask which naming style they'd like). Use this suffixed
+       name as `<date>` for the rest of this skill (commit message, push, and the
+       branch referenced in Step 4's prompt).
+     Reusing the existing branch without asking risks silently folding unrelated work
+     into a run that may already be scheduled (or may even have already fired) against
+     it — if unsure whether a routine is already pointed at it, check with
+     `RemoteTrigger action: "list"` before deciding.
 3. If there are pending changes to `SPEC.md`/`issues/`:
    - `git add SPEC.md issues/`
    - Commit: `Prepare backlog for overnight run — <date>` (plus this project's usual
@@ -146,10 +160,11 @@ this conversation) telling it to:
    never create or switch to a different branch, and never attempt to push anywhere
    other than the branch it's already on.
 2. Before anything else, pull in the prepared backlog:
-   `git fetch origin overnight/<date>` then `git merge origin/overnight/<date>` (the
-   branch from Step 1) — resolve merge conflicts in favor of clean history since this is
-   the very first step and nothing local has diverged yet. Never touch `main` at any
-   point.
+   `git fetch origin <branch>` then `git merge origin/<branch>`, where `<branch>` is the
+   exact branch name resolved and pushed in Step 1 (`overnight/<date>`, or the suffixed
+   name if this was an independent same-day run) — resolve merge conflicts in favor of
+   clean history since this is the very first step and nothing local has diverged yet.
+   Never touch `main` at any point.
 3. Read and follow `.claude/skills/implement-issue-auto/SKILL.md` from that branch
    exactly (it invokes `review-issue-auto` itself, per issue).
 4. Run it once — it loops the whole eligible backlog itself, commits and pushes per
