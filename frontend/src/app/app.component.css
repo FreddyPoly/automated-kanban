@@ -108,6 +108,12 @@
   background: #eef2ec;
   border-radius: 8px;
   padding: 10px 12px;
+  border-left: 4px solid transparent;
+}
+
+.card.urgent {
+  background: #f7e3df;
+  border-left-color: #b14a3b;
 }
 
 .card-title {
