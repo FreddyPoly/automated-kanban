@@ -1,7 +1,7 @@
 ---
 id: per-column-card-creation-001
 title: Replace global add-card state with per-column open/draft tracking
-status: open
+status: done
 security: false
 owner: agent
 depends_on: []
@@ -43,3 +43,11 @@ draft title text. This is the logic half of the feature — no template/CSS chan
   target column.
 - SPEC.md explicitly rejected a single global input with a column selector, and explicitly
   rejected limiting to one open column at a time — don't reintroduce either.
+- As expected by the split with per-column-card-creation-002, `app.component.html` still
+  references the removed `newCardTitle`/`addCard()` after this issue alone, so the app does
+  not build/render until 002 lands. That template/CSS work is 002's scope, landed in the same
+  overnight run immediately after this issue.
+- Pre-existing, unrelated to this change: `frontend/src/app/app.component.spec.ts` fails to
+  compile at baseline (`Property 'title' does not exist on type 'AppComponent'`) — stale
+  Angular-CLI boilerplate never updated for this project. Not fixed here (out of scope); see
+  `OVERNIGHT_REPORT.md`.

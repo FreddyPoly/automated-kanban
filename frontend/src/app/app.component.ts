@@ -14,9 +14,11 @@ import { Card, COLUMN_DEFS, ColumnDef, ColumnId } from './kanban.model';
 export class AppComponent implements OnInit {
   columns: ColumnDef[] = COLUMN_DEFS;
   cards: Card[] = [];
-  newCardTitle = '';
   loading = true;
   error: string | null = null;
+
+  openColumns = new Set<ColumnId>();
+  draftTitles: Record<ColumnId, string> = { todo: '', in_progress: '', done: '' };
 
   constructor(private kanban: KanbanService) {}
 
@@ -43,13 +45,26 @@ export class AppComponent implements OnInit {
     return this.cards.filter((c) => c.column === column);
   }
 
-  addCard(): void {
-    const title = this.newCardTitle.trim();
+  openAdd(column: ColumnId): void {
+    this.openColumns.add(column);
+  }
+
+  cancelAdd(column: ColumnId): void {
+    this.openColumns.delete(column);
+    this.draftTitles[column] = '';
+  }
+
+  submitAdd(column: ColumnId): void {
+    const title = this.draftTitles[column].trim();
     if (!title) return;
-    this.kanban.createCard(title, 'todo').subscribe((card) => {
+    this.kanban.createCard(title, column).subscribe((card) => {
       this.cards = [...this.cards, card];
-      this.newCardTitle = '';
+      this.draftTitles[column] = '';
     });
+  }
+
+  isAdding(column: ColumnId): boolean {
+    return this.openColumns.has(column);
   }
 
   move(card: Card, direction: 1 | -1): void {
