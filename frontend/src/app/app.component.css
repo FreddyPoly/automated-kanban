@@ -93,6 +93,7 @@
   border-radius: 8px;
   padding: 10px 12px;
   border-left: 4px solid transparent;
+  cursor: grab;
 }
 
 .card.urgent {
@@ -122,11 +123,6 @@
   cursor: pointer;
 }
 
-.card-actions button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
 .card-actions button.delete {
   color: #b14a3b;
 }
@@ -145,4 +141,22 @@
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
+}
+
+.card.dragging {
+  opacity: 0.4;
+}
+
+.card.drop-before {
+  box-shadow: 0 -3px 0 0 #2f6f4f;
+}
+
+.card.drop-after {
+  box-shadow: 0 3px 0 0 #2f6f4f;
+}
+
+.empty.drop-target {
+  color: #2f6f4f;
+  outline: 2px dashed #2f6f4f;
+  outline-offset: -2px;
 }

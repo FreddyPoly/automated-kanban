@@ -78,17 +78,78 @@ a target column; the frontend now just passes the clicked column's id instead of
   per-column state is simpler to reason about and lets the user add to two columns without
   the first input closing.
 
+## Feature: Drag-and-drop card movement
+
+Cards can be dragged with the mouse/touch to move them between columns and to reorder
+them within a column. This replaces the previous `←`/`→` move buttons.
+
+### Behavior
+
+- **Drag mechanism**: implemented with the native HTML5 Drag and Drop API
+  (`draggable`, `dragstart`/`dragover`/`drop`/`dragend`) — no new dependency added
+  (in particular, no `@angular/cdk`).
+- **Arrow buttons removed**: the `←`/`→` buttons are removed from the card's action row.
+  `⚑` (urgent toggle) and `✕` (delete) remain. This removes the only non-pointer way to
+  move a card — an accepted, deliberate tradeoff for this demo project.
+- **Drop target = any column, any position**: dragging a card resolves both a target
+  column and a target index within that column's list, computed from cursor position
+  relative to sibling cards during `dragover`. This enables free cross-column moves (no
+  adjacency restriction — the backend already allowed moving to any column directly) and
+  reordering within a column.
+- **Visual feedback**: the dragged card shows reduced opacity in place plus the browser's
+  native drag ghost; a placeholder/insertion line indicates where the card will land,
+  updated live during `dragover`. An empty column is a valid drop target (resolves to
+  index 0). A `dragend` without a valid drop is a no-op — the card stays where it was.
+- **Optimistic UI update**: on drop, the card is repositioned in the local `cards` array
+  immediately; the move/reorder API call fires in the background. On failure, the board
+  refetches from the server to reconcile (surfaced via the existing `error` banner).
+- **No-op guard**: no API call fires if a drop resolves to the same column and same index
+  the card already had.
+
+### Data model / API
+
+- Backend: add `position: int` to the `Card` model — the card's 0-based order within its
+  column. The existing `PATCH /api/cards/{id}/move` endpoint is extended (not replaced,
+  keeping this project's one-endpoint-per-action convention) with an optional `index`
+  field. `_Store.move_card` inserts the card at `index` within the target column's
+  position-sorted list, renumbers that column to consecutive integers, and — if the
+  column changed — also renumbers the source column to close the gap. An omitted `index`
+  defaults to end-of-column (append), preserving current "add card" behavior and any
+  non-drag callers.
+  - New cards get `position = len(existing cards in that column)` (appended at the end).
+  - Seed data gets `position = 0` in each of its columns (one seed card per column).
+- Frontend: add `position: number` to the `Card` interface; `cardsIn(column)` sorts by
+  it. `KanbanService.moveCard` gains an optional `index` param, passed through to the
+  `/move` endpoint.
+- Storage: in-memory only, same as every other field.
+
+### Rejected alternatives
+
+- Angular CDK drag-drop — would give built-in accessibility/touch support "for free," but
+  rejected to avoid adding a new dependency.
+- Keeping the arrow buttons as an accessible/keyboard fallback alongside drag — rejected
+  in favor of a cleaner action row; drag-and-drop becomes the only way to move cards.
+- Restricting drops to adjacent columns only (mirroring the old arrow-button behavior) —
+  rejected; free drag-to-any-column matches what the backend already permitted via
+  `/move`.
+
 ## Security
 
 No change to the project's existing risk posture: no auth, no persistence beyond the
 in-memory store, no sensitive data. The "urgent" toggle adds a boolean flag on an existing
-internal card id, and per-column card creation only changes which column a card title
-(already free-text, already sent to the backend) is targeted at — neither introduces a new
-untrusted-input surface. Stays low-risk, same as the rest of the app (see `README.md`).
+internal card id, per-column card creation only changes which column a card title
+(already free-text, already sent to the backend) is targeted at, and drag-and-drop adds
+only integer `column`/`index` values that the backend clamps to a valid range — none of
+these introduce a new untrusted-input surface. Stays low-risk, same as the rest of the app
+(see `README.md`).
 
 ## QC approach
 
 No dedicated automated QC harness for these features. The frontend is a small Angular app
 with existing unit-test scaffolding (karma/jasmine) and the backend exposes a thin, fully
 scriptable REST API — manual QC plus unit tests are sufficient; a GUI-automation harness
-would be noise for a surface this small.
+would be noise for a surface this small. For drag-and-drop specifically: the drag
+interaction itself is exercised via manual QC in-browser, while the index-calculation
+logic and the extended `KanbanService.moveCard` / backend `move_card` reorder logic are
+covered by unit tests (karma/jasmine can dispatch synthetic `dragstart`/`dragover`/`drop`
+DOM events).

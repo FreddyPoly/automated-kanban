@@ -23,23 +23,25 @@
               (click)="openAdd(column.id)"
             >+</button>
           </div>
-          <ul class="card-list">
+          <ul
+            class="card-list"
+            (dragover)="onDragOver($event, column.id)"
+            (drop)="onDrop($event, column.id)"
+          >
             @for (card of cardsIn(column.id); track card.id) {
-              <li class="card" [class.urgent]="card.urgent">
+              <li
+                class="card"
+                [class.urgent]="card.urgent"
+                [class.dragging]="draggedCardId === card.id"
+                [class.drop-before]="dropIndicator(column.id, card) === 'before'"
+                [class.drop-after]="dropIndicator(column.id, card) === 'after'"
+                [attr.data-card-id]="card.id"
+                draggable="true"
+                (dragstart)="onDragStart($event, card)"
+                (dragend)="onDragEnd()"
+              >
                 <span class="card-title">{{ card.title }}</span>
                 <div class="card-actions">
-                  <button
-                    type="button"
-                    title="Move left"
-                    [disabled]="isFirst(card.column)"
-                    (click)="move(card, -1)"
-                  >←</button>
-                  <button
-                    type="button"
-                    title="Move right"
-                    [disabled]="isLast(card.column)"
-                    (click)="move(card, 1)"
-                  >→</button>
                   <button
                     type="button"
                     [title]="card.urgent ? 'Unmark urgent' : 'Mark urgent'"
@@ -54,7 +56,7 @@
                 </div>
               </li>
             } @empty {
-              <li class="empty">No cards</li>
+              <li class="empty" [class.drop-target]="isEmptyDropTarget(column.id)">No cards</li>
             }
             @if (isAdding(column.id)) {
               <li class="add-card-row">
