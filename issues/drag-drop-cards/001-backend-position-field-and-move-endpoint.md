@@ -1,7 +1,7 @@
 ---
 id: drag-drop-cards-001
 title: Add position field to Card model and extend the move endpoint with reordering
-status: open
+status: done
 security: false
 owner: agent
 depends_on: []
@@ -59,3 +59,10 @@ action whether or not the column changes.
 - Don't renumber a column's positions on `delete_card` — leaving gaps there is fine since
   sort-by-position is stable regardless of gaps; only `move_card` needs to keep its
   touched columns' positions consecutive.
+
+`code-review` note: since `delete_card` can leave gaps and `add_card`'s position is a plain
+count of existing cards in the column (per the acceptance criteria above), a card added right
+after a delete can land on the same `position` as a surviving card until the column is next
+touched by `move_card` (which renumbers it back to consecutive). Frontend sort is stable, so
+this only affects tie order between those two cards, never a crash or lost card — not fixed
+here since the count-based formula is what the acceptance criteria explicitly specify.

@@ -32,6 +32,7 @@ class Card(BaseModel):
     title: str
     column: Column
     urgent: bool = False
+    position: int
 
 
 class CardCreate(BaseModel):
@@ -41,6 +42,7 @@ class CardCreate(BaseModel):
 
 class CardMove(BaseModel):
     column: Column
+    index: int | None = None
 
 
 class CardUrgent(BaseModel):
@@ -64,7 +66,7 @@ class _Store:
             ("Write first automated issue", "todo"),
         ]:
             card_id = next(self._ids)
-            self._cards[card_id] = Card(id=card_id, title=title, column=column)
+            self._cards[card_id] = Card(id=card_id, title=title, column=column, position=0)
 
     def list_cards(self) -> list[Card]:
         with self._lock:
@@ -73,16 +75,39 @@ class _Store:
     def add_card(self, data: CardCreate) -> Card:
         with self._lock:
             card_id = next(self._ids)
-            card = Card(id=card_id, title=data.title, column=data.column)
+            position = sum(1 for c in self._cards.values() if c.column == data.column)
+            card = Card(id=card_id, title=data.title, column=data.column, position=position)
             self._cards[card_id] = card
             return card
 
-    def move_card(self, card_id: int, column: Column) -> Card:
+    def _column_cards(self, column: Column, exclude_id: int) -> list[Card]:
+        return sorted(
+            (c for c in self._cards.values() if c.column == column and c.id != exclude_id),
+            key=lambda c: c.position,
+        )
+
+    @staticmethod
+    def _renumber(cards: list[Card]) -> None:
+        for position, c in enumerate(cards):
+            c.position = position
+
+    def move_card(self, card_id: int, column: Column, index: int | None = None) -> Card:
         with self._lock:
             card = self._cards.get(card_id)
             if card is None:
                 raise KeyError(card_id)
+
+            source_column = card.column
+            target_list = self._column_cards(column, card_id)
+            clamped_index = len(target_list) if index is None else max(0, min(index, len(target_list)))
+            target_list.insert(clamped_index, card)
+            self._renumber(target_list)
+
             card.column = column
+
+            if source_column != column:
+                self._renumber(self._column_cards(source_column, card_id))
+
             return card
 
     def set_urgent(self, card_id: int, urgent: bool) -> Card:
@@ -121,7 +146,7 @@ def create_card(data: CardCreate) -> Card:
 @app.patch("/api/cards/{card_id}/move")
 def move_card(card_id: int, data: CardMove) -> Card:
     try:
-        return store.move_card(card_id, data.column)
+        return store.move_card(card_id, data.column, data.index)
     except KeyError:
         raise HTTPException(status_code=404, detail="Card not found")
 
