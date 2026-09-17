@@ -1,7 +1,7 @@
 ---
 id: drag-drop-cards-003
 title: Implement native drag-and-drop for moving/reordering cards, remove arrow buttons
-status: open
+status: done
 security: false
 owner: agent
 depends_on: [drag-drop-cards-002]
@@ -72,3 +72,26 @@ replaces the existing `←`/`→` move buttons, which are removed entirely.
   unit tests here can dispatch synthetic `dragstart`/`dragover`/`drop` DOM events to
   cover the index-calculation and optimistic-update logic, but the visual drag
   interaction itself is manually verified in-browser.
+
+`implement-issue-auto` verification note: no functional karma/jasmine suite is available
+(pre-existing stale `app.component.spec.ts` predates this run and blocks the whole suite —
+see `OVERNIGHT_REPORT.md`), so this was verified with `ng build` (typecheck) plus a live
+Playwright smoke test against `ng serve` + the real backend: cross-column drag (todo →
+done at index 0, with sibling renumbering), drag into an empty column, and same-column
+reorder were all exercised end-to-end and matched the expected API state and rendered
+order/visual indicators, with zero browser console errors. `code-review` found three
+non-blocking issues, all fixed: a dead `.card-actions button:disabled` CSS rule left over
+from the removed arrow buttons (removed), a duplicate `.card` selector block (merged into
+the existing one), and an O(N²) `dropIndicator` recomputation during `dragover` (fixed by
+precomputing a single `Map<cardId, 'before'|'after'>` once per `dragover` tick instead of
+recomputing the sorted sibling list on every per-card template call).
+
+`review-issue-auto` (Opus) verdict: PASS, with two hardening findings applied before commit:
+(1) a failed `/move` call silently discarded the optimistic change without showing the
+`error` banner, since `refresh()` resets `error` to `null` before its own fetch resolves —
+fixed by setting `this.error` right after calling `refresh()` in the failure handler, so it
+survives `refresh()`'s reset and surfaces the failure as the acceptance criteria intend.
+(2) `dragend`-clears-state was, for a cross-column drop, only correctness-by-timing (relying
+on Angular's `eventCoalescing` deferring change detection until after `dragend` fires) —
+hardened by also calling `onDragEnd()` explicitly at the end of `onDrop`, so state clearing
+no longer depends on that scheduling detail.

@@ -4,4 +4,4 @@
 |---------|--------|--------|---------|
 | urgent-cards | 3/3 done | qc-passed | 2026-09-17 |
 | per-column-card-creation | 2/2 done | qc-passed | 2026-09-17 |
-| drag-drop-cards | 2/3 done | not-ready | — |
+| drag-drop-cards | 3/3 done | ready-for-qc | — |
