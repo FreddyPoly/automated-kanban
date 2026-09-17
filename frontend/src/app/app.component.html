@@ -4,17 +4,6 @@
     <p class="subtitle">Test bed for the overnight implementation pipeline</p>
   </header>
 
-  <form class="add-card" (ngSubmit)="addCard()">
-    <input
-      type="text"
-      name="newCardTitle"
-      placeholder="New card title…"
-      [(ngModel)]="newCardTitle"
-      maxlength="200"
-    />
-    <button type="submit" [disabled]="!newCardTitle.trim()">Add card</button>
-  </form>
-
   @if (error) {
     <p class="error">{{ error }}</p>
   }
@@ -25,7 +14,15 @@
     <div class="board">
       @for (column of columns; track column.id) {
         <section class="column">
-          <h2>{{ column.label }}</h2>
+          <div class="column-header">
+            <h2>{{ column.label }}</h2>
+            <button
+              type="button"
+              class="add-card-btn"
+              title="Add card"
+              (click)="openAdd(column.id)"
+            >+</button>
+          </div>
           <ul class="card-list">
             @for (card of cardsIn(column.id); track card.id) {
               <li class="card" [class.urgent]="card.urgent">
@@ -58,6 +55,23 @@
               </li>
             } @empty {
               <li class="empty">No cards</li>
+            }
+            @if (isAdding(column.id)) {
+              <li class="add-card-row">
+                <input
+                  #draftInput
+                  type="text"
+                  class="add-card-input"
+                  [attr.data-column-id]="column.id"
+                  placeholder="New card title…"
+                  [ngModel]="draftTitles[column.id]"
+                  (ngModelChange)="draftTitles[column.id] = $event"
+                  (keydown.enter)="submitAdd(column.id)"
+                  (keydown.escape)="cancelAdd(column.id)"
+                  (blur)="cancelAdd(column.id)"
+                  maxlength="200"
+                />
+              </li>
             }
           </ul>
         </section>

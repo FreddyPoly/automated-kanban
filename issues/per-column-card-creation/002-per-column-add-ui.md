@@ -1,7 +1,7 @@
 ---
 id: per-column-card-creation-002
 title: Add per-column "+" button and inline input to the board template
-status: open
+status: done
 security: false
 owner: agent
 depends_on: [per-column-card-creation-001]

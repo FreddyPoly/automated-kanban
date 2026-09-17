@@ -23,35 +23,6 @@
   font-size: 14px;
 }
 
-.add-card {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.add-card input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #dde3da;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.add-card button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  background: #2f6f4f;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.add-card button:disabled {
-  background: #a8b5ac;
-  cursor: not-allowed;
-}
-
 .error {
   color: #b14a3b;
   background: #f7e3df;
@@ -83,12 +54,25 @@
   padding: 14px;
 }
 
-.column h2 {
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 12px;
+}
+
+.column h2 {
+  margin: 0;
   font-size: 15px;
   color: #5c675f;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.add-card-btn {
+  color: #2f6f4f;
+  flex-shrink: 0;
 }
 
 .card-list {
@@ -127,7 +111,8 @@
   flex-shrink: 0;
 }
 
-.card-actions button {
+.card-actions button,
+.add-card-btn {
   border: none;
   background: #ffffff;
   border-radius: 6px;
@@ -150,4 +135,14 @@
   color: #8b978e;
   font-size: 13px;
   font-style: italic;
+}
+
+.add-card-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid #dde3da;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
 }

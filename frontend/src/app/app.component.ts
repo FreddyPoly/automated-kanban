@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { KanbanService } from './kanban.service';
@@ -19,6 +19,9 @@ export class AppComponent implements OnInit {
 
   openColumns = new Set<ColumnId>();
   draftTitles: Record<ColumnId, string> = { todo: '', in_progress: '', done: '' };
+  private submittingColumns = new Set<ColumnId>();
+
+  @ViewChildren('draftInput') private draftInputs!: QueryList<ElementRef<HTMLInputElement>>;
 
   constructor(private kanban: KanbanService) {}
 
@@ -56,15 +59,28 @@ export class AppComponent implements OnInit {
 
   submitAdd(column: ColumnId): void {
     const title = this.draftTitles[column].trim();
-    if (!title) return;
-    this.kanban.createCard(title, column).subscribe((card) => {
-      this.cards = [...this.cards, card];
-      this.draftTitles[column] = '';
+    if (!title || this.submittingColumns.has(column)) return;
+    this.submittingColumns.add(column);
+    this.kanban.createCard(title, column).subscribe({
+      next: (card) => {
+        this.cards = [...this.cards, card];
+        this.draftTitles[column] = '';
+        this.submittingColumns.delete(column);
+        this.focusDraftInput(column);
+      },
+      error: () => {
+        this.submittingColumns.delete(column);
+      },
     });
   }
 
   isAdding(column: ColumnId): boolean {
     return this.openColumns.has(column);
+  }
+
+  private focusDraftInput(column: ColumnId): void {
+    const input = this.draftInputs.find((ref) => ref.nativeElement.dataset['columnId'] === column);
+    input?.nativeElement.focus();
   }
 
   move(card: Card, direction: 1 | -1): void {
