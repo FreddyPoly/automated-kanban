@@ -2,5 +2,5 @@
 
 | Feature | Issues | Status | Last QC |
 |---------|--------|--------|---------|
-| urgent-cards | 3/3 done | ready-for-qc | — |
-| per-column-card-creation | 2/2 done | ready-for-qc | — |
+| urgent-cards | 3/3 done | qc-passed | 2026-09-17 |
+| per-column-card-creation | 2/2 done | qc-passed | 2026-09-17 |
