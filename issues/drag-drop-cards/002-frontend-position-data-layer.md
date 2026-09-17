@@ -1,7 +1,7 @@
 ---
 id: drag-drop-cards-002
 title: Add position field to frontend Card model, sort by it, extend moveCard with an index param
-status: open
+status: done
 security: false
 owner: agent
 depends_on: [drag-drop-cards-001]

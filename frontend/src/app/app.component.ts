@@ -45,7 +45,7 @@ export class AppComponent implements OnInit {
   }
 
   cardsIn(column: ColumnId): Card[] {
-    return this.cards.filter((c) => c.column === column);
+    return this.cards.filter((c) => c.column === column).sort((a, b) => a.position - b.position);
   }
 
   openAdd(column: ColumnId): void {

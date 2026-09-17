@@ -18,8 +18,8 @@ export class KanbanService {
     return this.http.post<Card>(`${API_BASE}/cards`, { title, column });
   }
 
-  moveCard(id: number, column: ColumnId): Observable<Card> {
-    return this.http.patch<Card>(`${API_BASE}/cards/${id}/move`, { column });
+  moveCard(id: number, column: ColumnId, index?: number): Observable<Card> {
+    return this.http.patch<Card>(`${API_BASE}/cards/${id}/move`, { column, index });
   }
 
   setUrgent(id: number, urgent: boolean): Observable<Card> {
