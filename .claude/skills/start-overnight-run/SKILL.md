@@ -1,6 +1,6 @@
 ---
 name: start-overnight-run
-description: Commits and pushes any pending SPEC.md/issues/ changes to a fresh overnight/<date> branch, then asks what time (CEST/CET) to run tonight and creates a one-shot cloud routine (via RemoteTrigger) for implement-issue-auto, configured with a push-capable environment (auto-discovered from this repo's own trigger history, no hardcoded ID) so it can actually push. Run this by name after doc-to-issues, once you're ready to queue an overnight run — it is not invoked automatically by doc-to-issues or anything else.
+description: Commits and pushes any pending SPEC.md/issues/ changes to a fresh branch named after the feature being handed off (e.g. urgent-cards, no date, no overnight prefix), then asks what time (CEST/CET) to run tonight and creates a one-shot cloud routine (via RemoteTrigger) for implement-issue-auto, configured with a push-capable environment (auto-discovered from this repo's own trigger history, no hardcoded ID) so it can actually push. Run this by name after doc-to-issues, once you're ready to queue an overnight run — it is not invoked automatically by doc-to-issues or anything else.
 ---
 
 # start-overnight-run
@@ -20,35 +20,53 @@ this automatically as a consequence of another skill running.
 
 1. Run `git status --short` to see whether `SPEC.md` and/or `issues/` have pending
    (uncommitted or untracked) changes.
-2. Determine the branch name: `overnight/<YYYY-MM-DD>`, using today's date
-   (`date +%Y-%m-%d`).
-   - If **no** branch with that name exists yet (locally or on `origin`), create it
+2. Determine the branch name from the feature(s) being handed off, not from the date:
+   - Look at which `issues/<feature-slug>/` folder(s) contain the pending changes
+     from Step 1 (new/modified issue files under `issues/`). Collect the distinct
+     feature slugs touched.
+   - **Exactly one feature slug**: use it directly as the branch name (e.g.
+     `urgent-cards`) — no date, no `overnight` prefix or mention anywhere in the name.
+   - **More than one feature slug** (a handoff bundling issues from several features
+     at once): ask the user for a short combined branch name rather than guessing a
+     concatenation — don't invent one.
+   - **No pending changes at all** (e.g. re-running this skill after an earlier push
+     failed, with nothing new to add): ask the user which existing feature branch this
+     run belongs to instead of guessing.
+   - Call the resolved name `<branch>` for the rest of this skill.
+   - If **no** branch named `<branch>` exists yet (locally or on `origin`), create it
      fresh from the current `main` — this is the common case.
-   - If a branch with that name **already exists**, don't silently reuse it — ask the
-     user whether this backlog should join that branch or be scheduled independently:
+   - If a branch named `<branch>` **already exists**, don't silently reuse it — ask
+     the user whether this backlog should join that branch or be scheduled
+     independently. This check matters more now than it did with date-based names: a
+     bare feature slug is much more likely to collide with an unrelated, hand-made
+     branch a human is already using for that same feature, not just with a previous
+     overnight run.
      - **Join it** (e.g. re-running this skill because an earlier push failed, or
-       adding more issues before that night's run has fired): check it out (creating a
-       local tracking branch from `origin/<branch>` if it only exists remotely) and add
-       this backlog's commit to it as before — it'll be picked up by whatever routine
-       is already scheduled against that branch.
-     - **Independent run** (a second, separately-scheduled run landing the same day):
-       create a new branch instead, suffixed to disambiguate (e.g. `overnight/<date>-b`,
-       or a timestamp suffix — ask which naming style they'd like). Use this suffixed
-       name as `<date>` for the rest of this skill (commit message, push, and the
-       branch referenced in Step 4's prompt).
+       adding more issues before that night's run has fired, or it's genuinely the
+       same overnight backlog): check it out (creating a local tracking branch from
+       `origin/<branch>` if it only exists remotely) and add this backlog's commit to
+       it as before — it'll be picked up by whatever routine is already scheduled
+       against that branch.
+     - **Independent run** (a second, separately-scheduled run for the same feature,
+       or the existing branch turns out to be unrelated human work): create a new
+       branch instead, suffixed to disambiguate (e.g. `<branch>-2`, or ask which
+       naming style they'd like). Use this suffixed name as `<branch>` for the rest of
+       this skill (commit message, push, and the branch referenced in Step 4's
+       prompt).
      Reusing the existing branch without asking risks silently folding unrelated work
-     into a run that may already be scheduled (or may even have already fired) against
-     it — if unsure whether a routine is already pointed at it, check with
-     `RemoteTrigger action: "list"` before deciding.
+     into a run that may already be scheduled (or may even have already fired)
+     against it, or into a human's own unrelated feature branch — if unsure whether a
+     routine is already pointed at it, check with `RemoteTrigger action: "list"`
+     before deciding.
 3. If there are pending changes to `SPEC.md`/`issues/`:
    - `git add SPEC.md issues/`
-   - Commit: `Prepare backlog for overnight run — <date>` (plus this project's usual
+   - Commit: `Prepare backlog for overnight run — <branch>` (plus this project's usual
      commit attribution trailer).
-   - Push: `git push -u origin overnight/<date>` (or plain `git push` if the branch
-     already has an upstream).
+   - Push: `git push -u origin <branch>` (or plain `git push` if the branch already
+     has an upstream).
 4. If there are no pending changes but the branch already exists and is already pushed,
    that's fine — skip straight to Step 2 using that branch. If there's nothing to hand
-   off at all (no `SPEC.md`/`issues/` changes and no existing branch for today), stop and
+   off at all (no `SPEC.md`/`issues/` changes and no existing branch to reuse), stop and
    tell the user there's nothing to schedule.
 5. Switch back to `main` locally once the branch is pushed, so the working tree isn't
    left checked out on a throwaway branch.
@@ -81,13 +99,28 @@ history, so resolve it from there instead of hardcoding a literal:
    this repo slug, and read its `environment_id` (`job_config.ccr.environment_id` or
    `session_request.environment_id` — both fields carry the same value).
 4. If more than one match exists, prefer the most recently `updated_at`/`created_at` one.
-5. If **no** match exists — this is the first overnight run ever for this repo — stop and
-   tell the user: they need to create (or point you to) an Environment with GitHub push
-   access to this repo in claude.ai Settings → Environments, and confirm a push from it
-   actually works, before a routine can be scheduled. There is no way to do this step
-   without the user, since Environment creation isn't exposed to any tool. Once one such
-   Environment has been used successfully, this lookup will find it automatically on
-   every future run — for this repo or any other project that adopts this skill.
+5. If **no** match exists — this is the first overnight run ever for this repo — tell the
+   user this is the first run for this repo and the lookup found nothing to reuse, then:
+   1. Ask them to go to claude.ai Settings → Environments and create (or confirm) an
+      Environment with **push** access to this repo (`<owner>/<repo>` from Step 1) —
+      granting the Claude GitHub App access to the repo is a separate prerequisite,
+      worth confirming at the same time. There is no tool-based way to create or list
+      Environments, so this step is unavoidably manual.
+   2. Ask them to paste that Environment's `environment_id` directly (visible in its
+      detail view/URL in Settings → Environments) so this run can proceed now instead of
+      stopping and requiring a rerun of this skill afterward.
+   3. Use the pasted `environment_id` for Step 4 exactly as if it had been resolved from
+      history. Don't validate it beyond a plausibility check (non-empty, looks like an
+      ID) — if the routine creation in Step 4 later fails with an authorization error,
+      that's the signal it was wrong or lacks push access, and the user should recheck
+      the Environment's repo/access configuration.
+   4. If the user doesn't have an `environment_id` to hand (e.g. they just created the
+      Environment and don't know where to find it, or want to sort it out later), it's
+      fine to stop here instead — tell them to rerun this skill once they have it, and
+      that this manual step is only ever needed once per repo. Once one such Environment
+      has been used successfully in a routine, Step 3's history lookup will find it
+      automatically on every future run — for this repo or any other project that
+      adopts this skill.
 
 ## Step 4 — Create the routine
 
@@ -104,7 +137,7 @@ describes):
 
 ```json
 {
-  "name": "Overnight kanban run — automated-kanban — <date>",
+  "name": "Overnight kanban run — automated-kanban — <branch>",
   "run_once_at": "<UTC timestamp from Step 2>",
   "notifications": {"channel": {"push": true, "email": false, "slack": false}},
   "session_request": {
@@ -120,7 +153,7 @@ describes):
           "git_info": {
             "type": "github",
             "repo": "<this repo's owner/name slug>",
-            "branches": ["overnight-run"]
+            "branches": ["<branch>"]
           }
         }
       ]
@@ -131,6 +164,10 @@ describes):
   }
 }
 ```
+
+`<branch>` here is the exact same branch name resolved and pushed in Step 1 (e.g.
+`urgent-cards`) — both the routine's `name` field and the `outcomes.git_info.branches`
+hint should reference it, not the date.
 
 Notes on the fields that are easy to get wrong:
 
@@ -144,13 +181,17 @@ Notes on the fields that are easy to get wrong:
   `git_repository` entry. Without them the proxy has nothing to authorize a push
   credential against, regardless of `environment_id`.
 - `outcomes.git_info.branches` is only a **hint** — the platform ignores the exact string
-  and assigns its own randomly-suffixed branch name every run (confirmed: requesting
+  and appends its own random suffix to it every run (confirmed: requesting
   `test/push-check` produced `test/push-check-rnf1yg` one run and
-  `test/push-check-qlzcaa` the next). Don't rely on it to land on a specific branch name,
-  and don't try to fight this in the prompt — the fired session has a hard built-in rule
-  refusing to push to any branch other than the one it's already on, and there's no user
-  present to grant the "explicit permission" it asks for to override that. The prompt
-  below works *with* this instead of against it.
+  `test/push-check-qlzcaa` the next). Don't rely on it to land on the exact requested
+  name, and don't try to fight this in the prompt — the fired session has a hard built-in
+  rule refusing to push to any branch other than the one it's already on, and there's no
+  user present to grant the "explicit permission" it asks for to override that. The
+  prompt below works *with* this instead of against it. Even though the exact name isn't
+  honored, **do** send the real `<branch>` resolved in Step 1 as the hint (not a
+  generic placeholder) — the platform's suffix lands on top of whatever string is sent,
+  so this is what makes the resulting child branch (e.g. `urgent-cards-<suffix>`)
+  traceable back to its parent by a simple prefix match.
 
 The prompt (`session_request.config.events[0].payload.message.content`) must be a
 complete, standalone instruction (the triggered session starts fresh, with no memory of
@@ -161,10 +202,10 @@ this conversation) telling it to:
    other than the branch it's already on.
 2. Before anything else, pull in the prepared backlog:
    `git fetch origin <branch>` then `git merge origin/<branch>`, where `<branch>` is the
-   exact branch name resolved and pushed in Step 1 (`overnight/<date>`, or the suffixed
-   name if this was an independent same-day run) — resolve merge conflicts in favor of
-   clean history since this is the very first step and nothing local has diverged yet.
-   Never touch `main` at any point.
+   exact branch name resolved and pushed in Step 1 (the feature-slug name, or the
+   suffixed name if this was an independent run for the same feature) — resolve merge
+   conflicts in favor of clean history since this is the very first step and nothing
+   local has diverged yet. Never touch `main` at any point.
 3. Read and follow `.claude/skills/implement-issue-auto/SKILL.md` from that branch
    exactly (it invokes `review-issue-auto` itself, per issue).
 4. Run it once — it loops the whole eligible backlog itself, commits and pushes per
@@ -193,7 +234,10 @@ Tell the user, in one short summary:
 - That the run's **actual final branch name is not known yet** — it's assigned by the
   platform when the routine fires, not by this skill. Tell the user to check the run's
   notification, the `OVERNIGHT_REPORT.md` commit, or the `FINAL BRANCH:` line in the
-  claude.ai run log the next morning, rather than assuming it'll be `overnight/<date>`.
+  claude.ai run log the next morning, rather than assuming it'll exactly match the
+  requested branch name — it should, however, start with it (e.g. a branch named
+  `urgent-cards` in Step 1 becomes something like `urgent-cards-<suffix>`), which is
+  what makes it identifiable at a glance.
 - A reminder to check that the routine has **automatic approval** turned on, since it
   needs to run unattended with nobody available to approve actions (the validated
   environment above already ran with `permission_mode: auto`, but reconfirm if you
